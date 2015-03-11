@@ -42,8 +42,8 @@ class Test(Logger):
         raise NotImplementedError("All tests must implement this method.")
 
     @classmethod
-    def run_standalone(cls):
-        logging.basicConfig(level=logging.INFO)
+    def run_standalone(cls, log_level=logging.INFO):
+        logging.basicConfig(level=log_level)
         cluster = VagrantCluster()
         test = cls(cluster)
 

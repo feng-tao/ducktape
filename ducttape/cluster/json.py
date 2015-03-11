@@ -31,6 +31,7 @@ class JsonCluster(Cluster):
         init_nodes = [RemoteAccount(ninfo["hostname"], ninfo.get("user"), ninfo.get("ssh_args"),
                                     ninfo.get("java_home", "default"), ninfo.get("kafka_home", "default"))
                                     for ninfo in cluster_json["nodes"]]
+        self.all_nodes = set(init_nodes)
         self.available_nodes = collections.deque(init_nodes)
         self.in_use_nodes = set()
         self.id_source = 1
