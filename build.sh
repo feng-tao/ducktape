@@ -113,3 +113,13 @@ build_maven_project "rest-utils" "${GIT_MODE}confluentinc/rest-utils.git" "insta
 build_maven_project "schema-registry" "${GIT_MODE}confluentinc/schema-registry.git" "install"
 build_maven_project "kafka-rest" "${GIT_MODE}confluentinc/kafka-rest.git" "package"
 build_maven_project "camus" "${GIT_MODE}confluentinc/camus.git" "package" "confluent-master"
+
+# Install and configure CDH
+if [ ! -d hadoop-cdh ]; then
+    hadoop_cdh_version="hadoop-2.5.0-cdh5.3.0"
+    if [ ! -e $hadoop_cdh_version ]; then
+        curl http://archive.cloudera.com/cdh5/cdh/5/$hadoop_cdh_version.tar.gz -o "$hadoop_cdh_version.tar.gz"
+    fi
+    tar xvzf $hadoop_cdh_version.tar.gz
+    mv $hadoop_cdh_version hadoop-cdh
+fi

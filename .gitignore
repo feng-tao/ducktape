@@ -12,5 +12,7 @@ rest-utils/
 kafka-rest/
 schema-registry/
 camus/
+hadoop-cdh/
+hadoop*
 
 .DS_Store
