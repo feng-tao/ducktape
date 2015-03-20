@@ -20,6 +20,7 @@ from native_vs_rest_performance import NativeVsRestConsumerPerformance, NativeVs
 from schema_registry_benchmark import SchemaRegistryBenchmark
 from sr_kafka_broker_failover import KafkaLeaderCleanFailover, KafkaLeaderHardFailover, KafkaBrokerCleanBounce, KafkaBrokerHardBounce
 from sr_master_failover import MasterCleanFailover, MasterHardFailover, CleanBounce, HardBounce
+from simple_zk_test import SimpleZkTest
 from ducttape.logger import Logger
 from ducttape.cluster import VagrantCluster
 import time, logging
@@ -51,7 +52,7 @@ class TestDriver(Logger):
         # ]
 
         test_classes = [
-            MasterCleanFailover
+            SimpleZkTest
         ]
 
         return test_classes
