@@ -1,0 +1,2 @@
+enable_dns = true
+num_workers = %(num_workers)d

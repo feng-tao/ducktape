@@ -23,10 +23,13 @@ from sr_master_failover import MasterCleanFailover, MasterHardFailover, CleanBou
 from simple_zk_test import SimpleZkTest
 from ducttape.logger import Logger
 from ducttape.cluster import VagrantCluster
-import time, logging
+import time, logging, sys
 
 
 class TestDriver(Logger):
+    def __init__(self, mode="aws"):
+        self.mode = mode
+        self.cluster_size = 7
 
     def discover_tests(self):
         # test_classes = [
@@ -52,6 +55,7 @@ class TestDriver(Logger):
         # ]
 
         test_classes = [
+            EverythingRunsTest,
             SimpleZkTest
         ]
 
@@ -60,10 +64,13 @@ class TestDriver(Logger):
     def setup(self, log_level=logging.INFO):
         logging.basicConfig(level=log_level)
         self.tests = self.discover_tests()
+
+        VagrantCluster.up(self.cluster_size, mode=self.mode)
         self.cluster = VagrantCluster()
 
     def teardown(self):
-        pass
+        print "destrying cluster..."
+        # VagrantCluster.destroy()
 
     def run_test(self, test_class):
         """Run one test."""
@@ -101,7 +108,13 @@ class TestDriver(Logger):
 
 
 def main():
-    test_driver = TestDriver()
+
+    if len(sys.argv) > 1:
+        mode = sys.argv[1].lower()
+    else:
+        mode = "aws"
+
+    test_driver = TestDriver(mode)
     test_driver.setup()
     test_driver.run_all()
     test_driver.teardown()

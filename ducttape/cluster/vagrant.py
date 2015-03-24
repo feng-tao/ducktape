@@ -15,7 +15,7 @@
 from .cluster import Cluster, ClusterSlot
 from .json import JsonCluster
 
-import subprocess, re
+import subprocess, re, os
 
 class VagrantCluster(JsonCluster):
     """
@@ -65,5 +65,28 @@ class VagrantCluster(JsonCluster):
         }
 
         super(VagrantCluster, self).__init__(cluster_json)
+
+    @staticmethod
+    def up(num_workers=1, mode="aws"):
+
+        if mode.lower() == "aws":
+            template_file = "templates/aws-Vagrantfile.local"
+            up_cmd = "time vagrant up --no-provision --provider=aws --no-parallel && time vagrant provision"
+        elif mode.lower() == "local":
+            template_file = "templates/local-Vagrantfile.local"
+            up_cmd = "time vagrant up"
+        else:
+            raise Exception("Unsupported cluster mode.")
+
+        vagrant_file_data = open(template_file).read() % {'num_workers': num_workers}
+        with open("Vagrantfile.local", 'w') as new_vagrant_file:
+            new_vagrant_file.write(vagrant_file_data)
+
+        os.system(up_cmd)
+
+    @staticmethod
+    def destroy():
+        os.system("vagrant destroy -f")
+
 
 Cluster._FACTORY["vagrant"]   = VagrantCluster
