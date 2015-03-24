@@ -71,7 +71,7 @@ class VagrantCluster(JsonCluster):
 
         if mode.lower() == "aws":
             template_file = "templates/aws-Vagrantfile.local"
-            up_cmd = "time vagrant up --no-provision --provider=aws --no-parallel && time vagrant provision"
+            up_cmd = "vagrant up --no-provision --provider=aws --no-parallel && vagrant provision"
         elif mode.lower() == "local":
             template_file = "templates/local-Vagrantfile.local"
             up_cmd = "time vagrant up"
