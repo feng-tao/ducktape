@@ -52,8 +52,6 @@ class Service(TemplateRenderer):
         """
         super(Service, self).__init__(*args, **kwargs)
         self.num_nodes = num_nodes
-        self.cluster = context.cluster
-        self.logger = context.logger
         self.context = context
         self.allocated = False
 
@@ -62,6 +60,14 @@ class Service(TemplateRenderer):
         # after the service if something goes wrong.
         if hasattr(self.context, "services"):
             self.context.services.append(self)
+
+    @property
+    def cluster(self):
+        return self.context.cluster
+
+    @property
+    def logger(self):
+        return self.context.logger
 
     def who_am_i(self, node=None):
         """Human-readable identifier useful for log messages."""

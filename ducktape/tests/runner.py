@@ -40,18 +40,6 @@ class TestRunner(object):
         raise NotImplementedError()
 
 
-def create_test_case(test_class, session_context):
-    """Create test context object and instantiate test class.
-
-    :type test_class: ducktape.tests.test.Test.__class__
-    :type session_context: ducktape.tests.session.SessionContext
-    :rtype test_class
-    """
-
-    test_context = TestContext(session_context, test_class.__module__, test_class, test_class.run, config=None)
-    return test_class(test_context)
-
-
 class SerialTestRunner(TestRunner):
     """Runs tests serially."""
 
@@ -62,30 +50,28 @@ class SerialTestRunner(TestRunner):
 
         self.results.start_time = time.time()
         for test in self.tests:
-            # Create single testable unit and corresponding test result object
-            test_case = create_test_case(test, self.session_context)
-            result = TestResult(test_case.test_context, test_case.who_am_i())
+            result = TestResult(test.test_context, test.who_am_i())
 
             # Run the test unit
             try:
-                self.log(logging.INFO, test_case, "setting up")
-                self.setup_single_test(test_case)
+                self.log(logging.INFO, test, "setting up")
+                self.setup_single_test(test)
 
-                self.log(logging.INFO, test_case, "running")
+                self.log(logging.INFO, test, "running")
                 result.start_time = time.time()
-                result.data = self.run_single_test(test_case)
-                self.log(logging.INFO, test_case, "PASS")
+                result.data = self.run_single_test(test)
+                self.log(logging.INFO, test, "PASS")
 
             except BaseException as e:
-                self.log(logging.INFO, test_case, "FAIL")
+                self.log(logging.INFO, test, "FAIL")
                 result.success = False
                 result.summary += e.message + "\n" + traceback.format_exc(limit=16)
 
                 self.stop_testing = self.session_context.exit_first or isinstance(e, KeyboardInterrupt)
 
             finally:
-                self.log(logging.INFO, test_case, "tearing down")
-                self.teardown_single_test(test_case)
+                self.log(logging.INFO, test, "tearing down")
+                self.teardown_single_test(test)
                 result.stop_time = time.time()
                 self.results.append(result)
 
@@ -108,7 +94,7 @@ class SerialTestRunner(TestRunner):
 
     def run_single_test(self, test):
         """Run the test!"""
-        return test.run()
+        return test.run_test()
 
     def teardown_single_test(self, test):
         """teardown method which stops services, gathers log data, removes persistent state, and releases cluster nodes.

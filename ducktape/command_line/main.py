@@ -98,13 +98,13 @@ def main():
     extend_import_paths(args.test_path)
     loader = TestLoader(session_context)
     try:
-        test_classes = loader.discover(args.test_path)
+        tests = loader.discover(args.test_path)
     except LoaderException as e:
         print "Failed while trying to discover tests: {}".format(e)
         sys.exit(1)
 
     if args.collect_only:
-        print test_classes
+        print [test.who_am_i() for test in tests]
         sys.exit(0)
 
     # Initializing the cluster is slow, so do so only if
@@ -112,7 +112,7 @@ def main():
     session_context.cluster = VagrantCluster()
 
     # Run the tests
-    runner = SerialTestRunner(session_context, test_classes)
+    runner = SerialTestRunner(session_context, tests)
     test_results = runner.run_all_tests()
 
     # Report results

@@ -16,6 +16,7 @@ from ducktape.tests.loader import TestLoader, LoaderException
 from ducktape.tests.session import SessionContext
 
 from tests.mock import MockArgs
+from tests.loader.resources.loader_test_directory.test_a import TestA
 
 import os
 import os.path
@@ -35,17 +36,23 @@ class CheckTestLoader(object):
         os.mkdir(session_dir)
         self.SESSION_CONTEXT = SessionContext("test_session", session_dir, None, MockArgs())
 
+    def check_find_test_method(self):
+        """Check that discovery finds correct methods within a test class"""
+        loader = TestLoader(self.SESSION_CONTEXT)
+        test_method_names = loader.find_test_methods(TestA)
+        assert len(test_method_names) == 2
+
     def check_test_loader_with_directory(self):
         """Check discovery on a directory."""
         loader = TestLoader(self.SESSION_CONTEXT)
         test_classes = loader.discover([discover_dir()])
-        assert len(test_classes) == 4
+        assert len(test_classes) == 6
 
     def check_test_loader_with_file(self):
         """Check discovery on a file. """
         loader = TestLoader(self.SESSION_CONTEXT)
         test_classes = loader.discover([os.path.join(discover_dir(), "test_a.py")])
-        assert len(test_classes) == 1
+        assert len(test_classes) == 2
 
     def check_test_loader_multiple_files(self):
         loader = TestLoader(self.SESSION_CONTEXT)
@@ -54,7 +61,7 @@ class CheckTestLoader(object):
             os.path.join(discover_dir(), "test_b.py")
 
         ])
-        assert len(test_classes) == 3
+        assert len(test_classes) == 5
 
     def check_test_loader_with_nonexistent_file(self):
         """Check discovery on a starting path that doesn't exist throws an"""
@@ -66,11 +73,11 @@ class CheckTestLoader(object):
         """Check test discovery with discover class syntax."""
         loader = TestLoader(self.SESSION_CONTEXT)
         test_classes = loader.discover([os.path.join(discover_dir(), "test_b.py::TestBB")])
-        assert len(test_classes) == 1
+        assert len(test_classes) == 2
 
         # Sanity check, test that it discovers two tests if it searches the whole module
         test_classes = loader.discover([os.path.join(discover_dir(), "test_b.py")])
-        assert len(test_classes) == 2
+        assert len(test_classes) == 3
 
 
 

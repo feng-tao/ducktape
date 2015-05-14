@@ -35,9 +35,17 @@ class Test(TemplateRenderer):
         self.test_context = test_context
         self.logger = test_context.logger
 
+    def run_test(self):
+        f_name = self.test_context.method_name
+        if not hasattr(self, f_name):
+            raise RuntimeError("Attempting to run non existent test method: %s" % f_name)
+
+        test_method = getattr(self, f_name)
+        return test_method()
+
     def who_am_i(self):
         """Human-readable name for help with logging."""
-        return self.__module__.split(".")[-1] + "." + self.__class__.__name__
+        return self.test_context.test_id
 
     def min_cluster_size(self):
         """Heuristic for guessing whether there are enough nodes in the cluster to run this test.
@@ -113,16 +121,14 @@ class Test(TemplateRenderer):
 
 class TestContext(Logger):
     """Wrapper class for state variables needed to properly run a single 'test unit'."""
-    def __init__(self, session_context, module=None, cls=None, function=None, config=None):
+    def __init__(self, session_context, module=None, cls=None, function=None):
         """
         :type session_context: ducktape.tests.session.SessionContext
         """
         self.module = module
         self.cls = cls
-        self.function = function
-        self.config = config
+        self.method_name = function
         self.session_context = session_context
-        self.cluster = session_context.cluster
         self.services = ServiceRegistry()
 
         # dict for toggling service log collection on/off
@@ -130,24 +136,27 @@ class TestContext(Logger):
 
         self.results_dir = self.session_context.results_dir
         if self.cls is not None:
-            self.results_dir = os.path.join(self.results_dir, self.cls.__name__)
+            self.results_dir = os.path.join(self.results_dir, self.test_id)
         mkdir_p(self.results_dir)
 
         self._logger_configured = False
         self.configure_logger()
 
     @property
+    def cluster(self):
+        return self.session_context.cluster
+
+    @property
     def test_id(self):
-        name_components = [self.session_context.session_id,
-                           self.module,
+        name_components = [self.__module__.split(".")[-1],
                            self.cls.__name__ if self.cls is not None else None,
-                           self.function.__name__ if self.function is not None else None]
+                           self.method_name if self.method_name is not None else None]
 
         return ".".join(filter(lambda x: x is not None, name_components))
 
     @property
     def logger_name(self):
-        return self.test_id
+        return ".".join([self.session_context.session_id, self.test_id])
 
     def configure_logger(self):
         if self._logger_configured:

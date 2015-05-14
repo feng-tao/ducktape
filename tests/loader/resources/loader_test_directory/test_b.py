@@ -16,15 +16,26 @@ from ducktape.tests.test import Test
 
 
 class TestB(Test):
-    """Loader should discover this."""
-    pass
+    def test_b(self):
+        """Loader should discover this."""
+        pass
 
 
 class TestBB(Test):
-    """Loader should discover this."""
-    pass
+    def test_bb(self):
+        """Loader should discover this."""
+        pass
+
+    def test_bb_2(self):
+        """Loader should discover this."""
+        pass
+
+    def not_a_testable_thing(self):
+        """Loader should not discover this."""
+        pass
 
 
 class TestInvisible(object):
-    """Loader should not discover this."""
-    pass
+    def test_invisible(self):
+        """Loader should not discover this."""
+        pass

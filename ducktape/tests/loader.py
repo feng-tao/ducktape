@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from ducktape.tests.test import Test
+from ducktape.tests.test import TestContext
 
 import importlib
 import inspect
@@ -27,8 +28,10 @@ class LoaderException(Exception):
 class TestLoader(object):
     """Class used to discover and load tests."""
     DEFAULT_TEST_FILE_PATTERN = "(^test_.*\.py$)|(^.*_test\.py$)"
+    DEFAULT_TEST_METHOD_PATTERN = "(^run$)|(^test_.*$)|(^.*_test$)"
 
     def __init__(self, session_context):
+        self.session_context = session_context
         self.logger = session_context.logger
 
     def parse_discovery_symbol(self, discovery_symbol):
@@ -52,7 +55,6 @@ class TestLoader(object):
 
         return tuple([directory, module, cls_name])
 
-
     def discover(self, test_discovery_symbols, pattern=DEFAULT_TEST_FILE_PATTERN):
         """Recurse through packages in file hierarchy starting at base_dir, and return a list of all found test classes.
 
@@ -64,7 +66,7 @@ class TestLoader(object):
         :type pattern: str
         :rtype: list
         """
-        test_classes = []
+        testable_units = []
         assert type(test_discovery_symbols) == list, "Expected test_discovery_symbols to be a list."
         for symbol in test_discovery_symbols:
             directory, module_name, cls_name = self.parse_discovery_symbol(symbol)
@@ -81,27 +83,55 @@ class TestLoader(object):
             test_modules = self.import_modules(test_files)
 
             # pull test_classes out of test_modules
-            tests_from_symbol = []
+            test_classes_from_symbol = []
             for module in test_modules:
                 try:
-                    tests_from_symbol.extend(self.get_test_classes(module))
+                    test_classes_from_symbol.extend(self.get_test_classes(module))
                 except Exception as e:
                     self.logger.debug("Error getting test classes from module: " + e.message)
 
             if len(cls_name) > 0:
                 # We only want to run a specific test class
-                tests_from_symbol = [test for test in tests_from_symbol if test.__name__ == cls_name]
-                if len(tests_from_symbol) == 0:
+                test_classes_from_symbol = [test for test in test_classes_from_symbol if test.__name__ == cls_name]
+                if len(test_classes_from_symbol) == 0:
                     raise LoaderException("Could not find any tests corresponding to the symbol " + symbol)
 
-                if len(tests_from_symbol) > 1:
+                if len(test_classes_from_symbol) > 1:
                     raise LoaderException("Somehow there are multiple tests corresponding to the symbol " + symbol)
 
-            self.logger.debug("Discovered these test classes: " + str(tests_from_symbol))
-            test_classes.extend(tests_from_symbol)
+            # drill into test classes, discover test methods, and create testable units
+            for t_class in test_classes_from_symbol:
+                test_methods = self.find_test_methods(t_class)
+                if len(test_methods) > 0:
+                    testable_units.extend([self.create_test_case(t_class, m_name) for m_name in test_methods])
+                else:
+                    # If no "test method" in the base class, assume there is a run
+                    # method higher in the hierarchy
+                    testable_units.extend([self.create_test_case(t_class, "run")])
 
-        self.logger.debug("Discovered these tests: " + str(test_classes))
-        return test_classes
+        self.logger.debug("Discovered these tests: " + str(testable_units))
+        return testable_units
+
+    def find_test_methods(self, t_class):
+        """Find methods in the test class which look like tests"""
+        test_method_names = []
+        for attr_name in t_class.__dict__:
+            attr_obj = t_class.__dict__[attr_name]
+            if self.is_test_method(attr_obj):
+                test_method_names.append(attr_name)
+
+        return test_method_names
+
+    def create_test_case(self, test_class, method_name="run"):
+        """Create test context object and instantiate test class.
+
+        :type test_class: ducktape.tests.test.Test.__class__
+        :type session_context: ducktape.tests.session.SessionContext
+        :rtype test_class
+        """
+
+        test_context = TestContext(self.session_context, test_class.__module__, test_class, method_name)
+        return test_class(test_context)
 
     def find_test_files(self, base_dir, pattern=DEFAULT_TEST_FILE_PATTERN):
         """Return a list of files underneath base_dir that look like test files.
@@ -159,10 +189,19 @@ class TestLoader(object):
         return module_list
 
     def get_test_classes(self, module):
-        """Return list of all test classes in the module object.
-        """
+        """Return list of all test classes in the module object."""
         module_objects = module.__dict__.values()
         return [c for c in module_objects if self.is_test_class(c)]
+
+    def is_test_method(self, obj, pattern=DEFAULT_TEST_METHOD_PATTERN):
+        """A test method is any callable object with a name matching the test name pattern.
+        By default, a test method is "run", or "test_*" or "*_test"
+        """
+        if not hasattr(obj, "__name__"):
+            return False
+
+        method_name = obj.__name__
+        return hasattr(obj, "__call__") and re.match(pattern, method_name) is not None
 
     def is_test_file(self, file_name, pattern=DEFAULT_TEST_FILE_PATTERN):
         """By default, a test file looks like test_*.py or *_test.py"""
