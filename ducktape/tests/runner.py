@@ -70,8 +70,11 @@ class SerialTestRunner(TestRunner):
                 self.stop_testing = self.session_context.exit_first or isinstance(e, KeyboardInterrupt)
 
             finally:
-                self.log(logging.INFO, test, "tearing down")
-                self.teardown_single_test(test)
+
+                if not self.session_context.no_teardown:
+                    self.log(logging.INFO, test, "tearing down")
+                    self.teardown_single_test(test)
+
                 result.stop_time = time.time()
                 self.results.append(result)
 
