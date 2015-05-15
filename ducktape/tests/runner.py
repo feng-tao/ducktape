@@ -70,10 +70,8 @@ class SerialTestRunner(TestRunner):
                 self.stop_testing = self.session_context.exit_first or isinstance(e, KeyboardInterrupt)
 
             finally:
-
-                if not self.session_context.no_teardown:
-                    self.log(logging.INFO, test, "tearing down")
-                    self.teardown_single_test(test)
+                self.log(logging.INFO, test, "tearing down")
+                self.teardown_single_test(test)
 
                 result.stop_time = time.time()
                 self.results.append(result)
@@ -109,23 +107,26 @@ class SerialTestRunner(TestRunner):
         exceptions = []
         if hasattr(test_context, 'services'):
             services = test_context.services
-            try:
-                services.stop_all()
-            except BaseException as e:
-                exceptions.append(e)
-                self.log(logging.WARN, test, "Error stopping services: %s" % e.message + "\n" + traceback.format_exc(limit=16))
+            if not self.session_context.no_teardown:
+                try:
+                    services.stop_all()
+                except BaseException as e:
+                    exceptions.append(e)
+                    self.log(logging.WARN, test, "Error stopping services: %s" % e.message + "\n" + traceback.format_exc(limit=16))
 
+            # Capture logs even if no_teardown flag is set
             try:
                 test.copy_service_logs()
             except BaseException as e:
                 exceptions.append(e)
                 self.log(logging.WARN, test, "Error copying service logs: %s" % e.message + "\n" + traceback.format_exc(limit=16))
 
-            try:
-                services.clean_all()
-            except BaseException as e:
-                exceptions.append(e)
-                self.log(logging.WARN, test, "Error cleaning services: %s" % e.message + "\n" + traceback.format_exc(limit=16))
+            if not self.session_context.no_teardown:
+                try:
+                    services.clean_all()
+                except BaseException as e:
+                    exceptions.append(e)
+                    self.log(logging.WARN, test, "Error cleaning services: %s" % e.message + "\n" + traceback.format_exc(limit=16))
 
         try:
             test.free_nodes()
